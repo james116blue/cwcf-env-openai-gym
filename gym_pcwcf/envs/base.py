@@ -20,7 +20,11 @@ class BaseCwcfEnv(gym.Env):
         self.ACTION_DIM = self.FEATURE_DIM + self.TERMINAL_ACTIONS
         self.costs = np.ones(self.FEATURE_DIM) if costs is None else costs
         self.lambda_coefficient = lambda_coefficient  # стоимость добывания значения признака - д.б. положительным
-        self.terminal_reward = terminal_reward #нужно реализовывать
+        if terminal_reward is not None:
+            self.terminal_reward = terminal_reward
+        else:  #-1-0 вознагрждение
+            self.terminal_reward = np.ones(shape=(self.TERMINAL_ACTIONS, self.TERMINAL_ACTIONS)) * -1
+            np.fill_diagonal(self.terminal_reward, 0)
 
         self.mask = np.zeros((self.FEATURE_DIM), dtype=np.float32)  # mask - z vector
         self.x = np.zeros((self.FEATURE_DIM), dtype=np.float32)  # sample features

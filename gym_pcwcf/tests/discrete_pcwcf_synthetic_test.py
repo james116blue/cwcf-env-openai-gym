@@ -8,8 +8,8 @@ GYM_VERSION_NAME = 'gym_pcwcf:pcwcf-v0'
 
 print(f'current directory is {os.getcwd()}')
 FEATURE_DIM     = DATASET_SETTING['FEATURE_DIM']
-TERMINAL_ACTIONS= DATASET_SETTING['TERMINAL_ACTIONS']
-ACTION_DIM      = DATASET_SETTING['ACTION_DIM']
+TERMINAL_ACTIONS= 11
+ACTION_DIM      = FEATURE_DIM + TERMINAL_ACTIONS
 TRAIN_DATA_LEN  = DATASET_SETTING['TRAIN_DATA_LEN']
 
 def test_common_check():
@@ -158,3 +158,25 @@ def test_by_stablebaseline():
                    eps=1e-15)
     check_env(env)
 
+def test_actions_mask():
+    env = gym.make(GYM_VERSION_NAME, data_load_fn=DATA_LOAD_FN,
+                   lambda_coefficient=1e-3,
+                   costs=None,
+                   discretization_class_number=11,
+                   random_mode=True,
+                   eps=1e-15)
+    env.reset()
+    env.step(TERMINAL_ACTIONS )
+    env.step(TERMINAL_ACTIONS + 1)
+    true_actions_mask = env.action_masks()
+    target_actions_mask = np.ones(ACTION_DIM)
+    target_actions_mask[TERMINAL_ACTIONS] = 0
+    target_actions_mask[TERMINAL_ACTIONS+1] = 0
+    np.testing.assert_equal(true_actions_mask, target_actions_mask)
+
+env = gym.make(GYM_VERSION_NAME, data_load_fn=DATA_LOAD_FN,
+               lambda_coefficient=1e-3,
+               costs=None,
+               discretization_class_number=11,
+               random_mode=True,
+               eps=1e-15)

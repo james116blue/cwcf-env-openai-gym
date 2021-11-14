@@ -2,13 +2,14 @@ import numpy as np
 import gym
 import os
 #============================================DATASET
-from gym_pcwcf.config.config_synthetic_simple import DATASET_SETTING, DATA_LOAD_FN
+from gym_pcwcf.config.config_cicids2017_simple import DATASET_SETTING, DATA_LOAD_FN
 #============================================/DATASET
 GYM_VERSION_NAME = 'gym_pcwcf:cwcf-v0'
 
 print(f'current directory is {os.getcwd()}')
 FEATURE_DIM     = DATASET_SETTING['FEATURE_DIM']
-TERMINAL_ACTIONS= DATASET_SETTING['CLASS_DIM']
+CLASS_DIM = DATASET_SETTING['CLASS_DIM']
+TERMINAL_ACTIONS = CLASS_DIM
 ACTION_DIM      = FEATURE_DIM + TERMINAL_ACTIONS
 TRAIN_DATA_LEN  = DATASET_SETTING['TRAIN_DATA_LEN']
 
@@ -17,9 +18,10 @@ def test_common_check():
     env = gym.make(GYM_VERSION_NAME,
                    data_load_fn=DATA_LOAD_FN,
                    lambda_coefficient=1e-3,
-                   random_mode=True)
+                   random_mode=True,
+                   CLASS_DIM=CLASS_DIM)
     np.testing.assert_equal(2 * FEATURE_DIM , env.observation_space.shape[0])
-    np.testing.assert_equal(ACTION_DIM, env.action_space.n)
+    np.testing.assert_equal(env.action_space.n, ACTION_DIM)
     np.testing.assert_equal(env.DATA_LEN, TRAIN_DATA_LEN)
        
     s = env.reset()
@@ -36,13 +38,15 @@ def test_randomness():
     env_1 = gym.make(GYM_VERSION_NAME,
                    data_load_fn=DATA_LOAD_FN,
                    lambda_coefficient=1e-3,
-                   random_mode=True)
+                   random_mode=True,
+                   CLASS_DIM=CLASS_DIM)
     env_1.reset()
     s1 = env_1.x
     env_2 = gym.make(GYM_VERSION_NAME,
                    data_load_fn=DATA_LOAD_FN,
                    lambda_coefficient=1e-3,
-                   random_mode=True)
+                   random_mode=True,
+                   CLASS_DIM=CLASS_DIM)
     env_2.reset()
     s2 = env_2.x
     env_2.reset()
@@ -55,7 +59,8 @@ def test_determinism_for_random_mode():
     env = gym.make(GYM_VERSION_NAME,
                    data_load_fn=DATA_LOAD_FN,
                    lambda_coefficient=1e-3,
-                   random_mode=False)
+                   random_mode=False,
+                   CLASS_DIM=CLASS_DIM)
     env.reset()
     x0 = env.x
     y0 = env.y
@@ -74,7 +79,8 @@ def test_one_step():
     env = gym.make(GYM_VERSION_NAME,
                    data_load_fn=DATA_LOAD_FN,
                    lambda_coefficient=1e-3,
-                   random_mode=True)
+                   random_mode=True,
+                   CLASS_DIM=CLASS_DIM)
     s = env.reset()
     na = np.concatenate( (np.zeros((TERMINAL_ACTIONS)),
                           s[int(s.shape[0]/2):] ) )
@@ -98,7 +104,8 @@ def test_last_step():
     env = gym.make(GYM_VERSION_NAME,
                    data_load_fn=DATA_LOAD_FN,
                    lambda_coefficient=1e-3,
-                   random_mode=True)
+                   random_mode=True,
+                   CLASS_DIM=CLASS_DIM)
     s = env.reset()
     x_previous = env.x
     
@@ -113,7 +120,8 @@ def test_reward():
     env = gym.make(GYM_VERSION_NAME,
                    data_load_fn=DATA_LOAD_FN,
                    lambda_coefficient=1e-3,
-                   random_mode=True)
+                   random_mode=True,
+                   CLASS_DIM=CLASS_DIM)
     env.reset()
     x, y = env.x, env.y
     target_rewards = np.ones(ACTION_DIM - TERMINAL_ACTIONS + 1) * -0.001
@@ -128,7 +136,7 @@ def test_reward():
     x, y = env.x, env.y
     target_rewards = np.ones(ACTION_DIM - TERMINAL_ACTIONS + 1) * -0.001
     true_rewards = np.array( [env.step(action)[1] for action in range(ACTION_DIM-1, TERMINAL_ACTIONS-1, -1)] )
-    terminal_action = (y+1)%2
+    terminal_action = (y+1)%env.TERMINAL_ACTIONS
     target_rewards[-1] = -1
     terminal_reward = env.step(terminal_action)[1]
     true_rewards = np.append(true_rewards, terminal_reward)
@@ -139,14 +147,16 @@ def test_by_stablebaseline():
     env = gym.make(GYM_VERSION_NAME,
                    data_load_fn=DATA_LOAD_FN,
                    lambda_coefficient=1e-3,
-                   random_mode=True)
+                   random_mode=True,
+                   CLASS_DIM=CLASS_DIM)
     check_env(env)
 
 def test_actions_mask():
     env = gym.make(GYM_VERSION_NAME,
                    data_load_fn=DATA_LOAD_FN,
                    lambda_coefficient=1e-3,
-                   random_mode=True)
+                   random_mode=True,
+                   CLASS_DIM=CLASS_DIM)
     env.reset()
     env.step(TERMINAL_ACTIONS )
     env.step(TERMINAL_ACTIONS + 1)
@@ -155,3 +165,6 @@ def test_actions_mask():
     target_actions_mask[TERMINAL_ACTIONS] = 0
     target_actions_mask[TERMINAL_ACTIONS+1] = 0
     np.testing.assert_equal(true_actions_mask, target_actions_mask)
+
+if __name__=='__main__':
+    test_one_step()
