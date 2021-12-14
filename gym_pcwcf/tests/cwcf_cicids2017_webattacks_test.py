@@ -2,16 +2,18 @@ import numpy as np
 import gym
 import os
 #============================================DATASET
-from gym_pcwcf.config.config_cicids2017_simple import DATASET_SETTING, DATA_VAL_LOAD_FN
+from gym_pcwcf.config.config_cicids2017_webattacks import DATASET_SETTING, DATA_VAL_LOAD_FN, DATA_TEST_LOAD_FN
 #============================================/DATASET
 GYM_VERSION_NAME = 'gym_pcwcf:cwcf-v0'
-env_kwargs = dict( dataset_name='cicids2017_simple',
-                   lambda_coefficient=1e-3,
-                   is_binary_classification=False)
+IS_BINARY_CLASSIFICATION = True
+LAMBDA = 1e-4
+env_kwargs = dict( dataset_name='cicids2017_webattacks',
+                   lambda_coefficient=LAMBDA,
+                   is_binary_classification=IS_BINARY_CLASSIFICATION)
 print(f'current directory is {os.getcwd()}')
 FEATURE_DIM     = DATASET_SETTING['FEATURE_DIM']
 CLASS_DIM = DATASET_SETTING['CLASS_DIM']
-TERMINAL_ACTIONS = CLASS_DIM
+TERMINAL_ACTIONS = 2 if IS_BINARY_CLASSIFICATION==True else CLASS_DIM
 ACTION_DIM      = FEATURE_DIM + TERMINAL_ACTIONS
 TRAIN_DATA_LEN  = DATASET_SETTING['TRAIN_DATA_LEN']
 
@@ -45,8 +47,27 @@ def test_randomness():
     assert not np.all(np.equal(s1, s2)), "initial states should be different for each environment"
     assert not np.all(np.equal(s2, s3)), "initial states should be different  after reset environment"
 
-def test_determinism_for_random_mode():
+def test_determinism_for_random_mode_test_dataset():
+    #also test TEST mode
+    env = gym.make(GYM_VERSION_NAME,random_mode=False, mode='TEST', **env_kwargs)
+    np.testing.assert_equal(env.DATA_LEN, DATASET_SETTING['TEST_DATA_LEN'])
+    env.reset()
+    x0 = env.x
+    y0 = env.y
+    env.reset()
+    x1 = env.x
+    y1 = env.y
+    data = DATA_TEST_LOAD_FN()[:2]
+    data_x, data_y = data[:, 0:-1].astype('float32'), data[:, -1].astype('int32')
+    assert np.all(np.equal(x0, data_x[0]))
+    assert np.all(np.equal(x1, data_x[1]))
+    assert np.equal(y0, data_y[0])
+    assert np.equal(y1, data_y[1])
+
+def test_determinism_for_random_mode_val_dataset():
+    #also test TEST mode
     env = gym.make(GYM_VERSION_NAME,random_mode=False, mode='VAL', **env_kwargs)
+    np.testing.assert_equal(env.DATA_LEN, DATASET_SETTING['VAL_DATA_LEN'])
     env.reset()
     x0 = env.x
     y0 = env.y
@@ -98,7 +119,7 @@ def test_reward():
     env = gym.make(GYM_VERSION_NAME, **env_kwargs)
     env.reset()
     x, y = env.x, env.y
-    target_rewards = np.ones(ACTION_DIM - TERMINAL_ACTIONS + 1) * -0.001
+    target_rewards = np.ones(ACTION_DIM - TERMINAL_ACTIONS + 1) * -LAMBDA
     true_rewards = np.array( [env.step(action)[1] for action in range(ACTION_DIM-1, TERMINAL_ACTIONS-1, -1)] )
     terminal_action = y
     target_rewards[-1] = 0
@@ -108,7 +129,7 @@ def test_reward():
 
     env.reset()
     x, y = env.x, env.y
-    target_rewards = np.ones(ACTION_DIM - TERMINAL_ACTIONS + 1) * -0.001
+    target_rewards = np.ones(ACTION_DIM - TERMINAL_ACTIONS + 1) * -LAMBDA
     true_rewards = np.array( [env.step(action)[1] for action in range(ACTION_DIM-1, TERMINAL_ACTIONS-1, -1)] )
     terminal_action = (y+1)%env.TERMINAL_ACTIONS
     target_rewards[-1] = -1
@@ -126,7 +147,16 @@ def test_reward():
 def test_by_stablebaseline():
     from stable_baselines3.common.env_checker import check_env
     env = gym.make(GYM_VERSION_NAME, **env_kwargs)
-    check_env(env)
+    try:
+        check_env(env)
+    except Exception as e:
+        # Just print(e) is cleaner and more likely what you want,
+        # but if you insist on printing message specifically whenever possible...
+        if hasattr(e, 'message'):
+            print(e.message)
+        else:
+            print(e)
+
 
 def test_actions_mask():
     env = gym.make(GYM_VERSION_NAME, **env_kwargs)
@@ -139,5 +169,15 @@ def test_actions_mask():
     target_actions_mask[TERMINAL_ACTIONS+1] = 0
     np.testing.assert_equal(true_actions_mask, target_actions_mask)
 
-# if __name__=='__main__':
-#     test_one_step()
+def test_known_feature():
+    env = gym.make(GYM_VERSION_NAME,**env_kwargs)
+    env.reset()
+    action = np.random.randint(CLASS_DIM, ACTION_DIM)
+    try:
+        env.step(action)
+        env.step(action)
+        assert False
+    except ValueError as e:
+        assert True
+if __name__=='__main__':
+    test_by_stablebaseline()

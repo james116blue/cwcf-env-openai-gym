@@ -1,16 +1,30 @@
+import importlib
 import numpy as np
 import gym
 from gym import  spaces
 
 class BaseCwcfEnv(gym.Env):
     def __init__(self,
-                 data_load_fn,
-                 lambda_coefficient=0,
+                 dataset_name,
+                 mode,
+                 lambda_coefficient,
                  costs=None,
                  terminal_actions_count=None,
                  terminal_reward = None,
                  random_mode=True,
                  **kargs):
+
+        config_filename = 'gym_pcwcf.config.config_' + dataset_name
+        config_module = importlib.import_module(config_filename)
+
+        if mode=='TRAIN':
+            data_load_fn = config_module.DATA_TRAIN_LOAD_FN
+        elif mode=='VAL':
+            data_load_fn = config_module.DATA_VAL_LOAD_FN
+        elif mode=='TEST':
+            data_load_fn = config_module.DATA_TEST_LOAD_FN
+        else:
+            raise ValueError('unexisting mode!')
 
         data = data_load_fn()
         self.data_x, self.data_y = data[:, 0:-1].astype('float32'), data[:, -1].astype('int32')
@@ -48,6 +62,9 @@ class BaseCwcfEnv(gym.Env):
             s_next = self._get_state(self.x, self.mask)
         else:
             action_f = np.clip(action - self.TERMINAL_ACTIONS, 0, self.FEATURE_DIM) #cast action
+            if self.mask[action_f] == 1:
+                # That feature is already  selected!!!
+                raise ValueError('That feature is already  known!')
             self.mask[action_f] = 1
             r = -self.costs[action_f] * self.lambda_coefficient   #estimate reward for feature action
             s_next = self._get_state(self.x, self.mask)

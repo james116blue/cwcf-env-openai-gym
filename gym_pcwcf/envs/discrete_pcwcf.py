@@ -33,7 +33,7 @@ if __name__=="__main__":
     import gym
     import os
     # ============================================DATASET
-    from gym_pcwcf.config.config_synthetic_simple import DATASET_SETTING, DATA_LOAD_FN, MODEL_PATH
+    from gym_pcwcf.config.config_synthetic_simple import DATASET_SETTING, DATA_TRAIN_LOAD_FN, MODEL_PATH
     FEATURE_DIM = DATASET_SETTING['FEATURE_DIM']
     TERMINAL_ACTIONS = 11
     ACTION_DIM = FEATURE_DIM + TERMINAL_ACTIONS
@@ -41,7 +41,7 @@ if __name__=="__main__":
     GYM_VERSION_NAME = 'gym_pcwcf:pcwcf-v0'
     # ============================================/DATASET
     env = gym.make(GYM_VERSION_NAME,
-                   data_load_fn=DATA_LOAD_FN,
+                   data_load_fn=DATA_TRAIN_LOAD_FN,
                    lambda_coefficient=1e-3,
                    costs=None,
                    discretization_class_number=11,
